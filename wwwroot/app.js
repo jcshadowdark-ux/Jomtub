@@ -8,7 +8,7 @@ const fallback=[
  {id:'team-yellow',name:'Jomtub Team Edition',category:'เสื้อทีม',price:690,color:'#e8c744',description:'เสื้อทีมรุ่นพิเศษ'}
 ];
 const money=n=>'฿'+Number(n).toLocaleString('th-TH');
-async function init(){try{state.config=await fetch('/api/config').then(r=>r.json())}catch{};state.products=fallback;renderProducts();renderCart()}
+async function init(){try{state.config=await fetch('/api/config').then(r=>r.json())}catch{};state.products=fallback;if(state.config.supabaseAnonKey){try{const res=await fetch(`${state.config.supabaseUrl}/rest/v1/products?select=*&active=eq.true&order=created_at.asc`,{headers:{apikey:state.config.supabaseAnonKey,Authorization:`Bearer ${state.config.supabaseAnonKey}`}});if(res.ok){const remote=await res.json();if(remote.length)state.products=remote}}catch{}}renderProducts();renderCart()}
 function renderProducts(){const list=state.products.filter(p=>state.filter==='ทั้งหมด'||p.category===state.filter);document.querySelector('#products').innerHTML=list.map(p=>`<article class="product-card"><div class="product-image" style="background:${p.color}22"><span class="badge">${p.category}</span><div class="shirt" style="background:${p.color}">J</div></div><div class="product-info"><div><h3>${p.name}</h3><p>${p.description}</p></div><span class="price">${money(p.price)}</span></div><button class="add" data-id="${p.id}">เพิ่มลงตะกร้า +</button></article>`).join('');document.querySelectorAll('.add').forEach(b=>b.onclick=()=>add(b.dataset.id))}
 function add(id){const line=state.cart.find(x=>x.id===id);if(line)line.qty++;else state.cart.push({id,qty:1});save();renderCart();openCart()}
 function save(){localStorage.setItem('jomtub-cart',JSON.stringify(state.cart))}
