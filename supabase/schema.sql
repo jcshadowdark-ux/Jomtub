@@ -10,3 +10,26 @@ create table if not exists public.orders (
 );
 alter table public.orders enable row level security;
 create policy "public can create orders" on public.orders for insert with check (true);
+
+create table if not exists public.products (
+  id text primary key,
+  name text not null,
+  category text not null,
+  price numeric(12,2) not null,
+  color text not null default '#171717',
+  description text,
+  image_url text,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+alter table public.products enable row level security;
+create policy "public can view active products" on public.products for select using (active = true);
+
+insert into public.products (id,name,category,price,color,description) values
+('tee-black','Jomtub Essential Tee','เสื้อยืด',390,'#171717','เสื้อยืดทรงสบาย สีดำ'),
+('sport-orange','Jomtub Active Jersey','เสื้อกีฬา',590,'#f05a28','เสื้อกีฬาแห้งไว สีส้ม'),
+('team-white','Custom Team Jersey','เสื้อทีม',650,'#d8d7d2','เสื้อทีมสำหรับทุกแมตช์'),
+('tee-green','Everyday Logo Tee','เสื้อยืด',420,'#68756a','เสื้อยืดใส่ได้ทุกวัน'),
+('sport-navy','Move Training Top','เสื้อกีฬา',550,'#263746','เสื้อซ้อมน้ำหนักเบา'),
+('team-yellow','Jomtub Team Edition','เสื้อทีม',690,'#e8c744','เสื้อทีมรุ่นพิเศษ')
+on conflict (id) do nothing;
