@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ตั้งรหัสผ่านใหม่ | Jomtub Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Kanit:wght@300;400;500;600&display=swap">
+  <link rel="stylesheet" href="/admin.css">
+</head>
+<body>
+  <main class="login-view">
+    <section class="login-card">
+      <div class="brand-mark">J</div>
+      <p class="eyebrow">JOMTUB SPORT / SECURITY</p>
+      <h1>ตั้งรหัสผ่าน<br><em>ใหม่</em></h1>
+      <p id="reset-hint" class="hint">กำลังตรวจสอบลิงก์รีเซ็ต...</p>
+      <form id="reset-form" class="hidden">
+        <label>รหัสผ่านใหม่<input type="password" name="password" minlength="6" required placeholder="อย่างน้อย 6 ตัวอักษร"></label>
+        <label>ยืนยันรหัสผ่าน<input type="password" name="confirm" minlength="6" required placeholder="กรอกรหัสผ่านอีกครั้ง"></label>
+        <button class="button primary full" type="submit">บันทึกรหัสผ่าน <span>→</span></button>
+      </form>
+      <p id="reset-message" class="error"></p>
+      <a class="text-link" href="/admin.html">กลับหน้า Admin</a>
+    </section>
+  </main>
+  <script src="/reset.js"></script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+let cfg={};
+const form=document.querySelector('#forgot-form'),out=document.querySelector('#forgot-message');
+(async()=>{try{cfg=await fetch('/api/config').then(r=>r.json())}catch{out.textContent='เชื่อมต่อระบบไม่ได้ กรุณาลองใหม่อีกครั้ง'}})();
+form.onsubmit=async e=>{e.preventDefault();const email=new FormData(form).get('email');out.textContent='กำลังส่งอีเมล...';try{const r=await fetch(`${cfg.supabaseUrl}/auth/v1/recover`,{method:'POST',headers:{apikey:cfg.supabaseAnonKey,'Content-Type':'application/json'},body:JSON.stringify({email,redirect_to:`${location.origin}/reset.html`})});if(!r.ok)throw new Error();form.classList.add('hidden');out.style.color='#22713d';out.textContent='ส่งลิงก์แล้ว กรุณาตรวจสอบอีเมลล่าสุด และกดลิงก์ภายในเวลาที่กำหนด'}catch{out.style.color='';out.textContent='ส่งอีเมลไม่สำเร็จ กรุณาตรวจสอบอีเมลหรือการตั้งค่า Supabase URL'}};
