@@ -39,3 +39,26 @@ alter table public.orders add column if not exists transfer_date date;
 alter table public.orders add column if not exists transfer_amount numeric(12,2);
 alter table public.orders add column if not exists payment_note text;
 alter table public.orders add column if not exists payment_status text not null default 'unpaid';
+
+update public.products set image_url='/images/product-black-opt.png' where id='tee-black';
+update public.products set image_url='/images/product-orange-opt.png' where id='sport-orange';
+update public.products set image_url='/images/product-white-opt.png' where id='team-white';
+
+create table if not exists public.admin_users (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  email text,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+alter table public.admin_users enable row level security;
+
+create or replace function public.is_admin()
+returns boolean language sql stable security definer set search_path = public
+as $$ select exists (select 1 from public.admin_users where user_id = auth.uid() and is_active = true); $$;
+
+drop policy if exists "admins can manage products" on public.products;
+create policy "admins can manage products" on public.products for all to authenticated using (public.is_admin()) with check (public.is_admin());
+drop policy if exists "admins can view orders" on public.orders;
+create policy "admins can view orders" on public.orders for select to authenticated using (public.is_admin());
+drop policy if exists "admins can update orders" on public.orders;
+create policy "admins can update orders" on public.orders for update to authenticated using (public.is_admin()) with check (public.is_admin());
