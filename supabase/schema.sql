@@ -33,3 +33,9 @@ insert into public.products (id,name,category,price,color,description) values
 ('sport-navy','Move Training Top','เสื้อกีฬา',550,'#263746','เสื้อซ้อมน้ำหนักเบา'),
 ('team-yellow','Jomtub Team Edition','เสื้อทีม',690,'#e8c744','เสื้อทีมรุ่นพิเศษ')
 on conflict (id) do nothing;
+
+alter table public.orders add column if not exists order_no text;
+alter table public.orders add column if not exists transfer_date date;
+alter table public.orders add column if not exists transfer_amount numeric(12,2);
+alter table public.orders add column if not exists payment_note text;
+alter table public.orders add column if not exists payment_status text not null default 'unpaid';
