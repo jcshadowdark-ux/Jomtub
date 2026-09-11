@@ -39,6 +39,8 @@ alter table public.orders add column if not exists transfer_date date;
 alter table public.orders add column if not exists transfer_amount numeric(12,2);
 alter table public.orders add column if not exists payment_note text;
 alter table public.orders add column if not exists payment_status text not null default 'unpaid';
+alter table public.orders add column if not exists user_id uuid references auth.users(id) on delete set null;
+create index if not exists orders_user_id_idx on public.orders(user_id);
 
 update public.products set image_url='/images/product-black-opt.png' where id='tee-black';
 update public.products set image_url='/images/product-orange-opt.png' where id='sport-orange';
@@ -65,3 +67,40 @@ drop policy if exists "admins can view orders" on public.orders;
 create policy "admins can view orders" on public.orders for select to authenticated using (public.is_admin());
 drop policy if exists "admins can update orders" on public.orders;
 create policy "admins can update orders" on public.orders for update to authenticated using (public.is_admin()) with check (public.is_admin());
+
+create table if not exists public.profiles (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  email text,
+  full_name text,
+  phone text,
+  default_address text,
+  member_level text not null default 'Member',
+  points integer not null default 0,
+  total_spent numeric(12,2) not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.profiles enable row level security;
+drop policy if exists "users view own profile" on public.profiles;
+create policy "users view own profile" on public.profiles for select to authenticated using (user_id = auth.uid() or public.is_admin());
+drop policy if exists "users insert own profile" on public.profiles;
+create policy "users insert own profile" on public.profiles for insert to authenticated with check (user_id = auth.uid());
+drop policy if exists "users update own profile" on public.profiles;
+create policy "users update own profile" on public.profiles for update to authenticated using (user_id = auth.uid() or public.is_admin()) with check (user_id = auth.uid() or public.is_admin());
+
+create table if not exists public.cart_items (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  product_id text not null references public.products(id) on delete cascade,
+  quantity integer not null default 1 check (quantity > 0),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (user_id, product_id)
+);
+alter table public.cart_items enable row level security;
+drop policy if exists "users manage own cart" on public.cart_items;
+create policy "users manage own cart" on public.cart_items for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+drop policy if exists "members can create own orders" on public.orders;
+create policy "members can create own orders" on public.orders for insert to authenticated with check (user_id = auth.uid());
+drop policy if exists "members can view own orders" on public.orders;
+create policy "members can view own orders" on public.orders for select to authenticated using (user_id = auth.uid() or public.is_admin());
