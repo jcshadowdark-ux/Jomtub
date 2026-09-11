@@ -9,8 +9,6 @@ create table if not exists public.orders (
   created_at timestamptz not null default now()
 );
 alter table public.orders enable row level security;
-drop policy if exists "public can create orders" on public.orders;
-create policy "anonymous can create guest orders" on public.orders for insert to anon with check (user_id is null);
 
 create table if not exists public.products (
   id text primary key,
@@ -42,6 +40,10 @@ alter table public.orders add column if not exists payment_note text;
 alter table public.orders add column if not exists payment_status text not null default 'unpaid';
 alter table public.orders add column if not exists user_id uuid references auth.users(id) on delete set null;
 create index if not exists orders_user_id_idx on public.orders(user_id);
+
+drop policy if exists "public can create orders" on public.orders;
+drop policy if exists "anonymous can create guest orders" on public.orders;
+create policy "anonymous can create guest orders" on public.orders for insert to anon with check (user_id is null);
 
 update public.products set image_url='/images/product-black-opt.png' where id='tee-black';
 update public.products set image_url='/images/product-orange-opt.png' where id='sport-orange';
@@ -129,6 +131,7 @@ declare
   earned integer;
   new_total numeric(12,2);
   new_level text;
+  inserted_count integer;
 begin
   if new.user_id is null then return new; end if;
   if new.payment_status = 'paid' and coalesce(old.payment_status,'') <> 'paid' then
@@ -136,6 +139,8 @@ begin
     insert into public.point_transactions(user_id, order_id, points, note)
     values(new.user_id, new.id, earned, 'คะแนนจากคำสั่งซื้อ ' || coalesce(new.order_no,''))
     on conflict do nothing;
+    get diagnostics inserted_count = row_count;
+    if inserted_count = 0 then return new; end if;
 
     update public.profiles
       set points = points + earned,
