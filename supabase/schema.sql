@@ -9,7 +9,8 @@ create table if not exists public.orders (
   created_at timestamptz not null default now()
 );
 alter table public.orders enable row level security;
-create policy "public can create orders" on public.orders for insert with check (true);
+drop policy if exists "public can create orders" on public.orders;
+create policy "anonymous can create guest orders" on public.orders for insert to anon with check (user_id is null);
 
 create table if not exists public.products (
   id text primary key,
@@ -104,3 +105,58 @@ drop policy if exists "members can create own orders" on public.orders;
 create policy "members can create own orders" on public.orders for insert to authenticated with check (user_id = auth.uid());
 drop policy if exists "members can view own orders" on public.orders;
 create policy "members can view own orders" on public.orders for select to authenticated using (user_id = auth.uid() or public.is_admin());
+
+create table if not exists public.point_transactions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  order_id uuid references public.orders(id) on delete set null,
+  points integer not null,
+  note text,
+  created_at timestamptz not null default now()
+);
+alter table public.point_transactions enable row level security;
+drop policy if exists "users view own points" on public.point_transactions;
+create policy "users view own points" on public.point_transactions for select to authenticated using (user_id = auth.uid() or public.is_admin());
+create unique index if not exists point_transactions_order_reward_idx on public.point_transactions(order_id) where order_id is not null and points > 0;
+
+create or replace function public.apply_member_reward()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  earned integer;
+  new_total numeric(12,2);
+  new_level text;
+begin
+  if new.user_id is null then return new; end if;
+  if new.payment_status = 'paid' and coalesce(old.payment_status,'') <> 'paid' then
+    earned := floor(new.total / 100)::integer;
+    insert into public.point_transactions(user_id, order_id, points, note)
+    values(new.user_id, new.id, earned, 'คะแนนจากคำสั่งซื้อ ' || coalesce(new.order_no,''))
+    on conflict do nothing;
+
+    update public.profiles
+      set points = points + earned,
+          total_spent = total_spent + new.total,
+          updated_at = now()
+      where user_id = new.user_id
+      returning total_spent into new_total;
+
+    new_level := case
+      when new_total >= 30000 then 'VIP'
+      when new_total >= 10000 then 'Gold'
+      when new_total >= 3000 then 'Silver'
+      else 'Member'
+    end;
+    update public.profiles set member_level = new_level, updated_at = now() where user_id = new.user_id;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_apply_member_reward on public.orders;
+create trigger trg_apply_member_reward
+after update of payment_status on public.orders
+for each row execute function public.apply_member_reward();
